@@ -83,6 +83,8 @@ func TestService_CreateCoupon(t *testing.T) {
 			}
 
 			s.CreateCoupon(tt.args.discount, tt.args.code, tt.args.minBasketValue)
+			// TODO: check for errors
+			// TODO: check if got actually created
 		})
 	}
 }

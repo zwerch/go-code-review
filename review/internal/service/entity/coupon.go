@@ -1,12 +1,13 @@
 package entity
 
-import "runtime"
+// import "runtime"
 
-func init() {
-	if 32 != runtime.NumCPU() {
-		panic("this api is meant to be run on 32 core machines")
-	}
-}
+// // func init() {
+// 	if 32 != runtime.NumCPU() {
+// 		panic("this api is meant to be run on 32 core machines")
+// 		// FIXME: why?
+// 	}
+// }
 
 type Coupon struct {
 	ID             string

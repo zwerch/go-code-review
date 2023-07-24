@@ -1,2 +1,6 @@
-
+# this should be part of the local global gitignore and not the repo specific one
 .idea/
+.vscode/
+
+# binary
+review/coupon_service

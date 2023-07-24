@@ -2,18 +2,19 @@ package api
 
 import (
 	"context"
-	"coupon_service/internal/service/entity"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"coupon_service/internal/service/entity"
+
 	"github.com/gin-gonic/gin"
 )
 
-type Service interface {
+type Service interface { // TODO: should be declared by service package
 	ApplyCoupon(entity.Basket, string) (*entity.Basket, error)
-	CreateCoupon(int, string, int) any
+	CreateCoupon(int, string, int) (*entity.Coupon, error)
 	GetCoupons([]string) ([]entity.Coupon, error)
 }
 
@@ -24,54 +25,61 @@ type Config struct {
 
 type API struct {
 	srv *http.Server
-	MUX *gin.Engine
+	mux *gin.Engine
 	svc Service
-	CFG Config
+	cfg Config
 }
 
-func New[T Service](cfg Config, svc T) API {
-	gin.SetMode(gin.ReleaseMode)
-	r := new(gin.Engine)
-	r = gin.New()
+// why generics here?
+func New(cfg Config, svc Service) API {
+	gin.SetMode(gin.ReleaseMode) // could make use of different environments
+	r := new(gin.Engine)         // unnecessary line
+	r = gin.New()                // variable naming, also should probably use gin.Default()
 	r.Use(gin.Recovery())
 
 	return API{
-		MUX: r,
-		CFG: cfg,
+		mux: r,
+		cfg: cfg,
 		svc: svc,
-	}.withServer()
+	}.withServer().withRoutes()
 }
 
 func (a API) withServer() API {
 
-	ch := make(chan API)
-	go func() {
-		a.srv = &http.Server{
-			Addr:    fmt.Sprintf(":%d", a.CFG.Port),
-			Handler: a.MUX,
-		}
-		ch <- a
-	}()
+	// why?
+	// ch := make(chan API)
+	// go func() {
+	a.srv = &http.Server{
+		// Addr:    fmt.Sprintf(":%d", a.cfg.Port), // missing host
+		Addr:    fmt.Sprintf(":%d", 8080), // missing host
+		Handler: a.mux,
+	}
+	// ch <- a
+	// }()
 
-	return <-ch
-}
-
-func (a API) withRoutes() API {
-	apiGroup := a.MUX.Group("/api")
-	apiGroup.POST("/apply", a.Apply)
-	apiGroup.POST("/create", a.Create)
-	apiGroup.GET("/coupons", a.Get)
 	return a
 }
 
-func (a API) Start() {
-	if err := a.srv.ListenAndServe(); err != nil {
+func (a API) withRoutes() API { // function was unused before
+	apiGroup := a.mux.Group("/api") // should be versioned (v1)
+	apiGroup.POST("/apply", a.Apply)
+	apiGroup.POST("/create", a.Create)
+	apiGroup.GET("/coupons", a.Get)
+
+	return a
+}
+
+func (a API) Start() { // should return an error and simply wrap
+	if err := a.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
 
 func (a API) Close() {
+	// why not use time.Sleep? also this doubles the "sleep" time.
 	<-time.After(5 * time.Second)
+
+	// timeout could be a constant
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
